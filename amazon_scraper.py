@@ -156,3 +156,4 @@ if __name__ == '__main__':
         send_email(best_deals[['title', 'price', 'rating', 'reviews', 'availability']])
     else:
         print("ℹ️ No new or changed deals under $50 today. Email skipped.")
+        
