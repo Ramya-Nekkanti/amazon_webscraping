@@ -49,7 +49,6 @@ def get_availability(soup):
         return available.find("span").string.strip()
     except AttributeError:
         try:
-            # sometimes Amazon uses a different tag
             return soup.find("span", attrs={'id': 'twisterAvailability'}).text.strip()
         except:
             return "Not Available"
@@ -113,13 +112,11 @@ if __name__ == '__main__':
     if os.path.exists("amazon_data.csv"):
         old_df = pd.read_csv("amazon_data.csv")
 
-        # ✅ Ensure 'scraped_date' column exists
         if "scraped_date" not in old_df.columns:
             old_df["scraped_date"] = pd.NaT
     else:
         old_df = pd.DataFrame(columns=["title", "price", "rating", "reviews", "availability", "scraped_date"])
 
-    # Combine old and new
     combined_df = pd.concat([old_df, amazon_df]).drop_duplicates(subset=["title", "scraped_date"])
     combined_df.to_csv("amazon_data.csv", index=False)
 
@@ -128,12 +125,11 @@ if __name__ == '__main__':
     yesterday = (datetime.today() - timedelta(days=1)).date()
     yesterday_df = old_df[old_df["scraped_date"] == str(yesterday)]
 
-    # Find new or changed deals
-    if not yesterday_df.empty:
+    if old_df.empty or yesterday_df.empty:
+        new_or_changed = amazon_df  # first run → all products are new
+    else:
         merged = amazon_df.merge(yesterday_df, on="title", how="left", suffixes=("", "_y"))
         new_or_changed = merged[(merged["price"] != merged["price_y"]) | merged["price_y"].isna()]
-    else:
-        new_or_changed = amazon_df  # first run → everything is "new"
 
     # ------------------- Send Email if Needed -------------------
 
