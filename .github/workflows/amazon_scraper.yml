@@ -2,7 +2,7 @@ name: Amazon Scraper
 
 on:
   schedule:
-    - cron: "30 18 * * *"   # Runs daily at 6:30 PM UTC and 12:30 PM MDT
+    - cron: "*/10 * * * *"  # Runs daily at 6:30 PM UTC and 12:30 PM MDT
   workflow_dispatch:       # Allow manual run from GitHub Actions tab
 
 jobs:
