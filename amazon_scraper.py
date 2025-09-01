@@ -1,23 +1,20 @@
-import requests
 from bs4 import BeautifulSoup
+import requests
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 import os
+from datetime import datetime, timedelta
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+# ------------------- Extraction Functions -------------------
 
-# ---------------------------
-# Scraper Helper Functions
-# ---------------------------
 def get_title(soup):
     try:
-        return soup.find("span", class_="a-size-medium").text.strip()
+        return soup.find("span", attrs={"id": 'productTitle'}).text.strip()
     except AttributeError:
         return np.nan
-
 
 def get_price(soup):
     try:
@@ -26,129 +23,120 @@ def get_price(soup):
         return float(f"{price_whole}.{price_fraction}")
     except AttributeError:
         try:
-            price = soup.find("span", class_="a-offscreen").text.strip()
+            price = soup.find("span", attrs={'id': 'priceblock_dealprice'}).string.strip()
             return float(price.replace("$", "").replace(",", ""))
-        except:
+        except (AttributeError, ValueError):
             return np.nan
-
 
 def get_rating(soup):
     try:
-        return soup.find("span", class_="a-icon-alt").text.split()[0]
+        return soup.find("i", attrs={'class': 'a-icon a-icon-star a-star-4-5'}).string.strip()
     except AttributeError:
-        return np.nan
+        try:
+            return soup.find("span", attrs={'class': 'a-icon-alt'}).string.strip()
+        except:
+            return np.nan
 
-
-def get_reviews(soup):
+def get_review_count(soup):
     try:
-        return soup.find("span", {"class": "a-size-base"}).text.strip()
+        return soup.find("span", attrs={'id': 'acrCustomerReviewText'}).string.strip()
     except AttributeError:
         return np.nan
-
 
 def get_availability(soup):
     try:
-        return soup.find("span", {"class": "a-color-success"}).text.strip()
+        available = soup.find("div", attrs={'id': 'availability'})
+        return available.find("span").string.strip()
     except AttributeError:
-        return "Not Available"
+        try:
+            return soup.find("span", attrs={'id': 'twisterAvailability'}).text.strip()
+        except:
+            return "Not Available"
 
+# ------------------- Email Function -------------------
 
-# ---------------------------
-# Main Scraper
-# ---------------------------
-def scrape_amazon(search_query, max_pages=1):
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/115.0 Safari/537.36"
-        ),
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-
-    base_url = "https://www.amazon.com/s"
-    products = {"title": [], "price": [], "rating": [], "reviews": [], "availability": []}
-
-    for page in range(1, max_pages + 1):
-        params = {"k": search_query, "page": page}
-        res = requests.get(base_url, headers=headers, params=params)
-        soup = BeautifulSoup(res.content, "html.parser")
-
-        items = soup.find_all("div", {"data-component-type": "s-search-result"})
-        if not items:
-            print(f"⚠️ No results found on page {page}")
-            continue
-
-        for item in items:
-            products["title"].append(get_title(item))
-            products["price"].append(get_price(item))
-            products["rating"].append(get_rating(item))
-            products["reviews"].append(get_reviews(item))
-            products["availability"].append(get_availability(item))
-
-    df = pd.DataFrame(products)
-    df["scraped_date"] = datetime.now().date()
-    return df
-
-
-# ---------------------------
-# Email Sender
-# ---------------------------
 def send_email(new_data):
     sender = os.getenv("EMAIL_SENDER")
     password = os.getenv("EMAIL_PASSWORD")
     receiver = os.getenv("EMAIL_RECEIVER")
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart("alternative")
     msg["Subject"] = "New Amazon Deals Under $50"
     msg["From"] = sender
     msg["To"] = receiver
 
-    html_table = new_data.to_html(index=False, justify="center")
-    body = MIMEText(f"<h3>New/Updated Amazon Deals</h3>{html_table}", "html")
+    html_table = new_data.to_html(index=False, escape=False)
+    body = MIMEText(f"<h3>New Amazon Deals (Under $50)</h3>{html_table}", "html")
     msg.attach(body)
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(sender, password)
         server.sendmail(sender, receiver, msg.as_string())
 
+# ------------------- Main Scraper -------------------
 
-# ---------------------------
-# Main Logic
-# ---------------------------
-if __name__ == "__main__":
-    csv_file = "amazon_data.csv"
+if __name__ == '__main__':
 
-    # 1️⃣ Scrape fresh data
-    amazon_df = scrape_amazon("shoes for women sneakers", max_pages=2)
+    url = "https://www.amazon.ca/s?k=shoes+for+women+sneakers"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-CA, en;q=0.5'
+    }
 
-    # 2️⃣ Filter best deals (< $50)
-    amazon_df = amazon_df[pd.to_numeric(amazon_df["price"], errors="coerce") < 50].dropna(subset=["price"])
+    # Request search page
+    webpage = requests.get(url, headers=headers)
+    soup = BeautifulSoup(webpage.content, "html.parser")
 
-    # 3️⃣ Load old data (if exists)
-    if os.path.exists(csv_file):
-        old_df = pd.read_csv(csv_file)
-        old_df["scraped_date"] = pd.to_datetime(old_df["scraped_date"]).dt.date
+    # Collect product links
+    links = soup.find_all("a", attrs={'class':'a-link-normal s-no-outline'})
+    links_list = ["https://www.amazon.ca" + link.get('href') for link in links if link.get('href')]
+
+    # Prepare storage
+    d = {"title": [], "price": [], "rating": [], "reviews": [], "availability": []}
+
+    for link in links_list:
+        new_webpage = requests.get(link, headers=headers)
+        new_soup = BeautifulSoup(new_webpage.content, "html.parser")
+
+        d['title'].append(get_title(new_soup))
+        d['price'].append(get_price(new_soup))
+        d['rating'].append(get_rating(new_soup))
+        d['reviews'].append(get_review_count(new_soup))
+        d['availability'].append(get_availability(new_soup))
+
+    amazon_df = pd.DataFrame.from_dict(d)
+    amazon_df["scraped_date"] = datetime.today().date()
+
+    # ------------------- Merge with Old Data -------------------
+
+    if os.path.exists("amazon_data.csv"):
+        old_df = pd.read_csv("amazon_data.csv")
+
+        if "scraped_date" not in old_df.columns:
+            old_df["scraped_date"] = pd.NaT
     else:
-        old_df = pd.DataFrame(columns=amazon_df.columns)
+        old_df = pd.DataFrame(columns=["title", "price", "rating", "reviews", "availability", "scraped_date"])
 
-    today = datetime.now().date()
-    yesterday = today - timedelta(days=1)
+    combined_df = pd.concat([old_df, amazon_df]).drop_duplicates(subset=["title", "scraped_date"])
+    combined_df.to_csv("amazon_data.csv", index=False)
 
-    today_df = amazon_df.copy()
-    yesterday_df = old_df[old_df["scraped_date"] == yesterday] if not old_df.empty else pd.DataFrame(columns=amazon_df.columns)
+    # ------------------- Compare with Yesterday -------------------
 
-    # 4️⃣ Find new/changed products (today vs yesterday)
-    comparison_cols = ["title", "price", "rating", "reviews", "availability"]
-    new_data = pd.concat([today_df, yesterday_df]).drop_duplicates(subset=comparison_cols, keep=False)
+    yesterday = (datetime.today() - timedelta(days=1)).date()
+    yesterday_df = old_df[old_df["scraped_date"] == str(yesterday)]
 
-    # 5️⃣ Save updated data
-    combined_df = pd.concat([old_df, today_df]).drop_duplicates(subset=["title", "scraped_date"], keep="last")
-    combined_df.to_csv(csv_file, index=False)
+    if old_df.empty or yesterday_df.empty:
+        new_or_changed = amazon_df  # first run → all products are new
+    else:
+        merged = amazon_df.merge(yesterday_df, on="title", how="left", suffixes=("", "_y"))
+        new_or_changed = merged[(merged["price"] != merged["price_y"]) | merged["price_y"].isna()]
 
-    # 6️⃣ Send email only if new/changed deals exist
-    if not new_data.empty:
-        send_email(new_data[comparison_cols])
-        print(f"📩 Email sent with {len(new_data)} new/changed deals.")
+    # ------------------- Send Email if Needed -------------------
+
+    best_deals = new_or_changed[(new_or_changed["price"].notna()) & (new_or_changed["price"] < 50)]
+
+    if not best_deals.empty:
+        send_email(best_deals[["title", "price", "rating", "reviews", "availability"]])
+        print(f"✅ Email sent with {len(best_deals)} new deals under $50")
     else:
         print("ℹ️ No new or changed deals under $50 today. Email skipped.")
