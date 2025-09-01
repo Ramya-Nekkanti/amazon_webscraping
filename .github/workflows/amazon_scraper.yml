@@ -2,8 +2,8 @@ name: Amazon Scraper
 
 on:
   schedule:
-    - cron: "*/10 * * * *"  # Every 10 minutes
-  workflow_dispatch:        # Manual trigger
+    - cron: "*/10 * * * *"  # Runs every 10 minutes
+  workflow_dispatch:        # Allow manual run
 
 jobs:
   scrape:
@@ -42,3 +42,4 @@ jobs:
             git push https://x-access-token:${GH_PAT}@github.com/Ramya-Nekkanti/amazon_webscraping.git
           else
             echo "No changes in CSV, skipping commit."
+          fi
