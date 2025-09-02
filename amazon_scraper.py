@@ -110,6 +110,10 @@ if __name__ == '__main__':
         d['availability'].append(get_availability(new_soup))
 
     amazon_df = pd.DataFrame.from_dict(d)
+    
+    # ------------------- Save All Scraped Data -------------------
+    amazon_df.to_csv("amazon_data.csv", header=True, index=False)
+    print("\n✅ Saved all scraped data to amazon_data.csv")
 
     # ------------------- Filter Best Deals -------------------
     best_deals = amazon_df[(amazon_df["price"].notna()) & (amazon_df["price"] < 50)]
