@@ -1,7 +1,6 @@
 # Amazon Scraper – Automated Best Deals Finder
 
-This project automatically scrapes Amazon Canada for **women's shoes/sneakers**, identifies the best deals under $50, and emails only the new or updated deals. Historical data is stored for reporting and auditing.
-
+This project automatically scrapes Amazon Canada for **women's shoes/sneakers**, identifies the best deals under $50, and emails those deals. 
 ---
 
 ## **Project Overview**
@@ -13,8 +12,8 @@ This project automatically scrapes Amazon Canada for **women's shoes/sneakers**,
   - Rating
   - Number of reviews
   - Availability
-- **Output:** `amazon_data.csv` stores historical data with a `scraped_date` column.
-- **Email Notification:** Sends email only for **new or changed deals under $50**.
+- **Output:** `amazon_data.csv` stores 
+- **Email Notification:** Sends email only for **deals under $50**.
 
 ---
 
@@ -26,7 +25,6 @@ This project automatically scrapes Amazon Canada for **women's shoes/sneakers**,
    - `EMAIL_SENDER` → Gmail address
    - `EMAIL_PASSWORD` → App password
    - `EMAIL_RECEIVER` → Receiver email
-   - `GH_PAT` → Personal Access Token for committing CSV updates
 4. **Workflow Steps:**
    - Checkout the repository
    - Setup Python environment
