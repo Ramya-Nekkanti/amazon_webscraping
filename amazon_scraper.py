@@ -87,8 +87,15 @@ if __name__ == '__main__':
 
     # Collect product links
     links = soup.select("a.a-link-normal.s-no-outline")
-    links_list = ["https://www.amazon.ca" + link.get('href') for link in links if link.get('href')]
-
+    links_list = []
+    for link in links:
+        href = link.get('href')
+        if href:
+            # Only prepend domain if href starts with "/"
+            if href.startswith("/"):
+                links_list.append("https://www.amazon.ca" + href)
+            else:
+                links_list.append(href)
     # Prepare storage
     d = {"title": [], "price": [], "rating": [], "reviews": [], "availability": []}
 
