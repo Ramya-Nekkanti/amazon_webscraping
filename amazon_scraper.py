@@ -19,7 +19,11 @@ def get_price(soup):
     try:
         price_whole = soup.find("span", {"class": "a-price-whole"}).text.replace(",", "").strip()
         price_fraction = soup.find("span", {"class": "a-price-fraction"}).text.strip()
-        return float(f"{price_whole}.{price_fraction}")
+
+        # Clean up accidental extra dots
+        price_str = f"{price_whole}.{price_fraction}".replace("..", ".").strip()
+
+        return float(price_str)
     except AttributeError:
         try:
             price = soup.find("span", attrs={'id': 'priceblock_dealprice'}).string.strip()
