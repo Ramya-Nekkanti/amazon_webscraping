@@ -86,7 +86,7 @@ if __name__ == '__main__':
     soup = BeautifulSoup(webpage.content, "html.parser")
 
     # Collect product links
-    links = soup.find_all("a", attrs={"class" :"a-link-normal s-line-clamp-2 s-line-clamp-3-for-col-12 s-link-style a-text-normal"})
+    links = soup.select("a.a-link-normal.s-no-outline")
     links_list = ["https://www.amazon.ca" + link.get('href') for link in links if link.get('href')]
 
     # Prepare storage

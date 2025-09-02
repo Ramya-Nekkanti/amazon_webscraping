@@ -1,11 +1,11 @@
 name: Amazon Scraper
 
 on:
-  push:                     # Runs on every push to the repo
+  push:
     branches:
       - main
-  schedule:                 # Runs on schedule
-    - cron: "*/10 * * * *"  # Every 10 minutes
+  schedule:
+    - cron: "*/10 * * * *"  # Runs every 10 minutes
   workflow_dispatch:        # Allow manual run
 
 permissions:
@@ -36,13 +36,18 @@ jobs:
           EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
         run: python amazon_scraper.py
 
-      - name: Commit updated CSV (only if changed)
+      - name: Commit updated CSV (only if exists)
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add amazon_data.csv
-          if ! git diff --cached --quiet; then
-            git commit -m "Update scraped data [skip ci]"
-            git push origin main
+          if [ -f "amazon_data.csv" ]; then
+              git config --global user.name "GitHub Actions"
+              git config --global user.email "github-actions[bot]@users.noreply.github.com"
+              git add amazon_data.csv
+              if ! git diff --cached --quiet; then
+                  git commit -m "Update scraped data [skip ci]"
+                  git push origin main
+              else
+                  echo "No changes in CSV, skipping commit."
+              fi
           else
-            echo "No changes in CSV, skipping commit."
+              echo "CSV file not found, skipping commit."
+          fi
