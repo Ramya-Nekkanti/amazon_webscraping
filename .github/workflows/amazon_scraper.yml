@@ -1,8 +1,11 @@
 name: Amazon Scraper
 
 on:
-  schedule:
-    - cron: "*/10 * * * *"  # Runs every 10 minutes
+  push:                     # Runs on every push to the repo
+    branches:
+      - main
+  schedule:                 # Runs on schedule
+    - cron: "*/10 * * * *"  # Every 10 minutes
   workflow_dispatch:        # Allow manual run
 
 permissions:
@@ -43,4 +46,3 @@ jobs:
             git push origin main
           else
             echo "No changes in CSV, skipping commit."
-          fi

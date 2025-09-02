@@ -12,7 +12,7 @@ This project automatically scrapes Amazon Canada for **women's shoes/sneakers**,
   - Rating
   - Number of reviews
   - Availability
-- **Output:** `amazon_data.csv` stores 
+- **Output:** writes `amazon_data.csv` to the repo and also emails the product details
 - **Email Notification:** Sends email only for **deals under $50**.
 
 ---
