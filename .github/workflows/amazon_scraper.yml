@@ -4,9 +4,10 @@ on:
   push:
     branches:
       - main
-  schedule:
-    - cron: "*/10 * * * *"  # Runs every 10 minutes
+  # schedule:
+  #   - cron: "*/10 * * * *"  # Runs every 10 minutes
   workflow_dispatch:        # Allow manual run
+
 
 permissions:
   contents: write           # Required so GitHub Actions can push changes
